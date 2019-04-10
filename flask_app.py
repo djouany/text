@@ -1,4 +1,9 @@
 
+# coding: utf-8
+
+# In[107]:
+
+
 import pandas as pd
 import numpy as np
 import pickle
@@ -11,6 +16,9 @@ from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.snowball import SnowballStemmer
 
+
+model = pickle.load(open("/home/danjo23/mysite/model.sav", 'rb'))
+tags = pickle.load(open("/home/danjo23/mysite/tags.sav", 'rb'))
 
 tokenizer = RegexpTokenizer(r'\w+')
 stop = stopwords.words('english')
@@ -74,6 +82,12 @@ def stemming(value):
     mystring = " ".join(liste)
     return(mystring)
 
+def get_tag(data):
+    tags = []
+    for col in list(data.columns):
+        if data[col].sum() != 0:
+            tags.append(col)
+    return tags
 
 app = Flask(__name__)
 @app.route('/text', methods=['POST'])
@@ -88,8 +102,16 @@ def text ():
     result = remove_short(result)
     result = stemming(result)
     print(result)
-    
-    return str(result)
+    to_pred = pd.Series(result)
+    pred = model.predict(to_pred)
+    predict = pred.tolist()
+    print(predict)
+    resultat = pd.DataFrame(predict, columns= tags)
+    print(resultat.head())
+    pred_tag = get_tag(resultat)
+    print(pred_tag)
+
+    return str(pred_tag)
 
 if __name__ == "__main__":
     app.run(debug=True)
