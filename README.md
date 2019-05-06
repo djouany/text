@@ -2,15 +2,14 @@
 # TEXT Classification
 API de recommandation de tags pour les posts stackoverflow
 
+URL : http://danjo23.pythonanywhere.com
+
 **Méthode :** POSTS
 
-**Entrée :** format JSON
-{"texte": "Texte libre (langue anglaise)"} 
-> NB : Les caractères **"** doivent être échappés par un **\\**
+**Entrée :** Texte en saisie libre dans l'interface
 
-**Sortie :** Liste de tags
+**Sortie :** Liste de tags et probabilités associées
 
-URL : http://danjo23.pythonanywhere.com/text
 
 ## Traitement
 - Suppression des balises HTML
