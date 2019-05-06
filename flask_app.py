@@ -1,14 +1,9 @@
-
-# coding: utf-8
-
-# In[107]:
-
-
 import pandas as pd
 import numpy as np
 import pickle
 
-from flask import Flask, request
+from flask import Flask, render_template, request
+
 from bs4 import BeautifulSoup
 import string
 import regex as re
@@ -17,8 +12,8 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem.snowball import SnowballStemmer
 
 
-model = pickle.load(open("/home/danjo23/mysite/model.sav", 'rb'))
-tags = pickle.load(open("/home/danjo23/mysite/tags.sav", 'rb'))
+model = pickle.load(open("model_lr.sav", 'rb'))
+cols = pickle.load(open("tags.sav", 'rb'))
 
 tokenizer = RegexpTokenizer(r'\w+')
 stop = stopwords.words('english')
@@ -37,6 +32,9 @@ my_dict = {'c#':'csharp',
        }
 
 
+#############
+# Fonctions #
+#############
 # Suppression des balises html
 def balises(text):
     text = BeautifulSoup(text).get_text()
@@ -75,25 +73,27 @@ def remove_short(text):
 def stemming(value):
     words = value.split(' ')
     liste = []
-    mystring = []
+    string = []
     for word in words:
         word = stemmer.stem(word)
         liste.append(word)
-    mystring = " ".join(liste)
-    return(mystring)
+    string = " ".join(liste)
+    return(string)
 
-def get_tag(data):
-    tags = []
-    for col in list(data.columns):
-        if data[col].sum() != 0:
-            tags.append(col)
-    return tags
+def predict_model():
+    #toncodepredict
+    return prediction
 
+
+#############
+# App       #
+#############
 app = Flask(__name__)
-@app.route('/text', methods=['POST'])
-def text ():
-    value = request.get_json(force=True)
-    texte = str(value["texte"])
+
+@app.route("/result", methods=['POST'])
+def result():
+    a = request.values.get("question") #if request.forms.get("question") is not None
+    texte = a
     result = balises(texte)
     result = minuscule(result)
     result = remove_stop(result, stop)
@@ -101,17 +101,27 @@ def text ():
     result = remove_punc(result)
     result = remove_short(result)
     result = stemming(result)
-    print(result)
     to_pred = pd.Series(result)
-    pred = model.predict(to_pred)
-    predict = pred.tolist()
-    print(predict)
-    resultat = pd.DataFrame(predict, columns= tags)
-    print(resultat.head())
-    pred_tag = get_tag(resultat)
-    print(pred_tag)
+    res = model.predict_proba(to_pred)
+    res_list = res.tolist()
+    flat_list = [item for sublist in res_list for item in sublist]
+    data = list(zip(cols, flat_list))
+    pred_df = pd.DataFrame(data, columns=['tag', 'proba'])
+    pred_df = pred_df[pred_df['proba'] > 0.24]
+    pred_df.sort_values(by='proba', ascending=False)
 
-    return str(pred_tag)
+    print(pred_df.sort_values(by='proba', ascending=False))
+    table = pred_df.head().to_html()
+    #return render_template("reponse.html", table="table")
+    return render_template("reponse.html", table=table)
+
+
+
+@app.route('/')
+def home():
+    return render_template("question.html")
+
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
